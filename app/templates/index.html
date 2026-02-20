@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG in a Box</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <header>
+        <div class="header-row">
+            <h1>RAG in a Box</h1>
+            <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
+                <span class="theme-icon-light">&#9789;</span>
+                <span class="theme-icon-dark">&#9788;</span>
+            </button>
+        </div>
+        <div class="header-row">
+            <h2>For demonstration purposes</h2>
+        </div>
+        <p class="subtitle">Retrieval-Augmented Generation</p>
+        <p class="subtitle">This leverages the nomic-embed-text-v1.5 (half-precision) embedding model hosted on Abe's machine</p>
+        <p class="subtitle">For Q&A leverages Claude Sonnet via Anthropic API</p>
+    </header>
+
+    <main>
+        <!-- STEP 1: Load Document -->
+        <section class="step active" id="step-1" data-step="1">
+            <div class="step-header">
+                <span class="step-number">1</span>
+                <h2>Load Your Document</h2>
+            </div>
+            <div class="step-body">
+                <div class="input-options">
+                    <button class="tab-btn" data-tab="paste">Paste Text</button>
+                    <button class="tab-btn" data-tab="sample">Use a Sample</button>
+                    <button class="tab-btn active" data-tab="upload">Upload File</button>
+                </div>
+                <div class="tab-content" id="tab-paste">
+                    <textarea id="text-input" placeholder="Paste your text here..."></textarea>
+                </div>
+                <div class="tab-content" id="tab-sample">
+                    <div id="sample-list" class="sample-list">Loading samples...</div>
+                </div>
+                <div class="tab-content active" id="tab-upload">
+                    <label class="file-upload">
+                        <input type="file" id="file-input" accept=".pdf,.txt,.md">
+                        <span>Choose a .pdf, .txt, or .md file</span>
+                    </label>
+                    <p id="file-name" class="file-name"></p>
+                    <div class="preset-doc">
+                        <button id="btn-load-340b" class="btn-secondary btn-pulse">Load 340B Manual</button>
+                        <p class="preset-doc-desc">Loads and generates embeddings from a local pdf of the 340B Policy &amp; Procedure Manual</p>
+                    </div>
+                </div>
+                <div class="step-actions">
+                    <span id="char-count" class="char-count"></span>
+                    <button id="btn-ingest" class="btn-primary" disabled>Ingest Document &rarr;</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- STEP 2: Chunking -->
+        <section class="step" id="step-2" data-step="2">
+            <div class="step-header">
+                <span class="step-number">2</span>
+                <h2>Chunking</h2>
+                <span class="step-badge" id="chunk-badge"></span>
+            </div>
+            <div class="step-body">
+                <p class="step-desc">The document is split into overlapping chunks so each piece fits within the embedding model's context window.</p>
+                <div id="chunks-container" class="chunks-grid"></div>
+            </div>
+        </section>
+
+        <!-- STEP 3: Embeddings -->
+        <section class="step" id="step-3" data-step="3">
+            <div class="step-header">
+                <span class="step-number">3</span>
+                <h2>Embeddings</h2>
+                <span class="step-meta" id="embed-meta"></span>
+            </div>
+            <div class="step-body">
+                <p class="step-desc">Each chunk is converted into a high-dimensional vector (a list of numbers) that captures its semantic meaning. Similar text produces similar vectors.</p>
+                <div id="embeddings-container" class="embeddings-list"></div>
+            </div>
+        </section>
+
+        <!-- Connector -->
+        <div class="pipeline-break" id="pipeline-break">
+            <div class="break-line"></div>
+            <span>Document indexed — ready for questions</span>
+            <div class="break-line"></div>
+        </div>
+
+        <!-- STEP 4: Ask a Question -->
+        <section class="step" id="step-4" data-step="4">
+            <div class="step-header">
+                <span class="step-number">4</span>
+                <h2>Ask a Question</h2>
+            </div>
+            <div class="step-body">
+                <div class="query-input">
+                    <input type="text" id="question-input" placeholder="Ask a question about the document...">
+                    <button id="btn-query" class="btn-primary" disabled>Search &amp; Generate &rarr;</button>
+                </div>
+                <div id="suggested-questions"></div>
+            </div>
+        </section>
+
+        <!-- STEP 5: Similarity Search -->
+        <section class="step" id="step-5" data-step="5">
+            <div class="step-header">
+                <span class="step-number">5</span>
+                <h2>Similarity Search</h2>
+            </div>
+            <div class="step-body">
+                <p class="step-desc">The question is embedded into the same vector space, then compared against every chunk using cosine similarity. The most relevant chunks are retrieved.</p>
+                <div id="query-embedding" class="query-embedding"></div>
+                <div id="search-results" class="search-results"></div>
+            </div>
+        </section>
+
+        <!-- STEP 6: Context Assembly -->
+        <section class="step" id="step-6" data-step="6">
+            <div class="step-header">
+                <span class="step-number">6</span>
+                <h2>Context Assembly</h2>
+            </div>
+            <div class="step-body">
+                <p class="step-desc">The retrieved chunks are assembled into a prompt along with the user's question and a system instruction that constrains the LLM to answer only from the provided context.</p>
+                <pre id="assembled-prompt" class="prompt-display"></pre>
+            </div>
+        </section>
+
+        <!-- STEP 7: LLM Response -->
+        <section class="step" id="step-7" data-step="7">
+            <div class="step-header">
+                <span class="step-number">7</span>
+                <h2>LLM Response</h2>
+                <span class="step-meta" id="llm-meta"></span>
+            </div>
+            <div class="step-body">
+                <p class="step-desc">The LLM reads the context and generates an answer grounded in the retrieved chunks — not from its training data.</p>
+                <div id="llm-response" class="llm-response"></div>
+                <div class="step-actions" id="post-actions" style="display:none">
+                    <button id="btn-another" class="btn-secondary">Ask Another Question</button>
+                    <button id="btn-reset" class="btn-secondary">Start Over</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Loading overlay -->
+    <div id="loading-overlay" class="loading-overlay" style="display:none">
+        <div class="spinner"></div>
+        <p id="loading-text">Processing...</p>
+    </div>
+
+    <!-- Status bar -->
+    <div id="status-bar" class="status-bar">
+        <span id="status-lm" class="status-dot"></span>
+        <span id="status-text">Checking services...</span>
+    </div>
+
+    <footer class="site-footer">
+        <p>Made just for fun, by <a href="https://www.linkedin.com/in/abramflansburg/" target="_blank" rel="noopener noreferrer">Abe</a></p>
+    </footer>
+
+    <script src="/static/app.js"></script>
+</body>
+</html>
