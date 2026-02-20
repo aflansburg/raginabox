@@ -25,8 +25,8 @@ You upload a document, and the app shows you exactly what happens at each step i
 ## What's in here
 
 - **FastAPI** backend serving a single-page frontend
-- **LM Studio** for local embeddings (nomic-embed-text-v1.5 by default)
-- **Claude** (Anthropic API) for the generation step - you could fork this and adapt it to another LLM provider easily
+- **LM Studio** integration (you need LM studio & the model) for local embeddings (nomic-embed-text-v1.5 by default)
+- **Claude** (Anthropic API) integration for the generation step - you could fork this project and adapt it to another LLM provider easily
 - In-memory vector store using cosine similarity (numpy)
 - Supports PDF, plain text, and markdown file uploads
 - Comes with a few sample documents so you can try it without uploading anything
@@ -35,7 +35,7 @@ You upload a document, and the app shows you exactly what happens at each step i
 
 - Python 3.14+
 - [uv](https://docs.astral.sh/uv/)
-- [LM Studio](https://lmstudio.ai/) running locally with an embedding model loaded (nomic-embed-text-v1.5 works well)
+- [LM Studio](https://lmstudio.ai/) running locally with an embedding model loaded (nomic-embed-text-v1.5 works well) - LM studio can expose a local inference endpoint
 - An [Anthropic API key](https://console.anthropic.com/)
 
 ## Setup
